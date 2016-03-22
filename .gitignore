@@ -1,0 +1,10 @@
+*.out
+*.txt
+*.sum
+*.mio
+*.in
+*.o
+*.data
+fase*
+potencial*
+Energia*
