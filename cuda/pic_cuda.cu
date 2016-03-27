@@ -1,6 +1,8 @@
 //#include "pic_cuda.hpp"
 #define BLOCK_SIZE 1024
 #define BLOCK_SIZE2 32
+#include <mpi.h>
+#include <unistd.h> //Hostname
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -15,6 +17,18 @@
 
 using namespace std;
 namespace pic_cuda {
+  //MPI
+  int initialized, finalized;
+
+  MPI_Initialized(&initialized);
+  if (!initialized) MPI_Init(NULL, NULL);
+  int rank, size_mpi;
+	char hostname[256];
+	MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+	MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+
+
+
   const int MAX_SPE     = 100000;           // Limite (computacional) de Superpartículas electrónicas
   const int MAX_SPI     = 100000;           // Limite (computacional) de Superpartículas iónicas
   const int J_X         = 1024;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
@@ -142,6 +156,8 @@ namespace pic_cuda {
   void initialize_Particles (double *pos_x, double *pos_y, double *vel_x, double *vel_y,
       int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
     for (int i = 0; i < MAX_SPE; i++) {
+
+      //To MPI
       pos_x[i + NSP] = 0;
       vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
       pos_y[i + NSP] = L_MAX_Y / 2.0;
@@ -162,6 +178,8 @@ namespace pic_cuda {
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
+
+      //To MPI
       jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
       j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
       temp_x  =  jr_x - j_x;
@@ -186,6 +204,8 @@ namespace pic_cuda {
       double temp_x, temp_y, tmp;
       double jr_x, jr_y, hhx;
       if(i < NSP) {
+
+        //To MPI
         hhx = hx * hx * hx;
         jr_x = d_pos_x[i] / hx; // indice (real) de la posición de la superpartícula
         j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
@@ -648,5 +668,8 @@ namespace pic_cuda {
       fclose(pFile[i]);
     }
   }
+
+  MPI_Finalized(&finalized);
+  if (!finalized) MPI_Finalize();
 
 }
