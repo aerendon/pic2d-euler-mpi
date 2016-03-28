@@ -1,8 +1,8 @@
 //#include "pic_cuda.hpp"
 #define BLOCK_SIZE 1024
 #define BLOCK_SIZE2 32
-#include <mpi.h>
-#include <unistd.h> //Hostname
+//#include <mpi.h>
+//#include <unistd.h> //Hostname
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -18,14 +18,14 @@
 using namespace std;
 namespace pic_cuda {
   //MPI
-  int initialized, finalized;
+ // int initialized, finalized;
 
-  MPI_Initialized(&initialized);
-  if (!initialized) MPI_Init(NULL, NULL);
-  int rank, size_mpi;
-	char hostname[256];
-	MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
-	MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+  //MPI_Initialized(&initialized);
+  //if (!initialized) MPI_Init(NULL, NULL);
+  //int rank, size_mpi;
+	//char hostname[256];
+//	MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+	//MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
 
 
 
@@ -158,10 +158,15 @@ namespace pic_cuda {
     for (int i = 0; i < MAX_SPE; i++) {
 
       //To MPI
-      pos_x[i + NSP] = 0;
-      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
-      pos_y[i + NSP] = L_MAX_Y / 2.0;
-      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+      if (rank == 0) {
+        pos_x[i + NSP] = 0;
+        vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
+      }
+      else if (rank == 1) {
+        pos_y[i + NSP] = L_MAX_Y / 2.0;
+        vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+        rank = 0;
+      }
     }
   }
 
@@ -300,10 +305,15 @@ namespace pic_cuda {
     f2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
 
     //To MPI
-    p = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
-    p_y = fftw_plan_dft_1d(N, f2, f2, FFTW_FORWARD, FFTW_ESTIMATE);
-    p_i = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
-    p_yi = fftw_plan_dft_1d(N, f2, f2, FFTW_BACKWARD, FFTW_ESTIMATE);
+    if (rank == 0) {
+      p = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
+      p_y = fftw_plan_dft_1d(N, f2, f2, FFTW_FORWARD, FFTW_ESTIMATE);
+    }
+    else if (rank == 1) {
+      p_i = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
+      p_yi = fftw_plan_dft_1d(N, f2, f2, FFTW_BACKWARD, FFTW_ESTIMATE);
+      rank = 0;
+    }
 
     // Columnas FFT
     for (int k = 0; k < N; k++) {
@@ -376,16 +386,28 @@ namespace pic_cuda {
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
         //To MPI
-        E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
+        if (rank == 0) {
+          E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
-        E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
+        }
+        else if (rank == 1) {
+          E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
             - phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
+          rank = 0;
+        }
 
-        E_X[k] = 0.0;  //Cero en las fronteras X
-        E_Y[k] = 0.0;
-        E_X[(J_X - 1) * J_Y + k] = 0.0;
-        E_Y[(J_X - 1) * J_Y + k] = 0.0;
+        //To MPI
+        if (rank == 0) {
+          E_X[k] = 0.0;  //Cero en las fronteras X
+          E_X[(J_X - 1) * J_Y + k] = 0.0;
+        }
+        else if (rank == 1) {
+          E_Y[k] = 0.0;
+          E_Y[(J_X - 1) * J_Y + k] = 0.0;
+          rank = 0;
+        }
       }
+
     }
 
   }
@@ -690,7 +712,7 @@ namespace pic_cuda {
     }
   }
 
-  MPI_Finalized(&finalized);
-  if (!finalized) MPI_Finalize();
+  //MPI_Finalized(&finalized);
+  //if (!finalized) MPI_Finalize();
 
 }
