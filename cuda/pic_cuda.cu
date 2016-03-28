@@ -209,10 +209,10 @@ namespace pic_cuda {
       double temp_x, temp_y, tmp;
       double jr_x, jr_y, hhx;
       if(i < NSP) {
+        hhx = hx * hx * hx;
 
         //To MPI
         if (rank = 0){
-          hhx = hx * hx * hx;
           jr_x = d_pos_x[i] / hx; // indice (real) de la posición de la superpartícula
           j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
           temp_x  =  jr_x - j_x;
@@ -299,6 +299,7 @@ namespace pic_cuda {
     f = (double*) fftw_malloc(sizeof(double)* M);
     f2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
 
+    //To MPI
     p = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
     p_y = fftw_plan_dft_1d(N, f2, f2, FFTW_FORWARD, FFTW_ESTIMATE);
     p_i = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
@@ -374,6 +375,7 @@ namespace pic_cuda {
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
+        //To MPI
         E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
         E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
@@ -394,6 +396,7 @@ namespace pic_cuda {
       int j = (blockIdx.x * blockDim.x + threadIdx.x) + 1;
       int k = (blockIdx.y * blockDim.y + threadIdx.y);
       if(j < J_X - 1 && k < J_Y) {
+        //To MPI
         d_E_X[j * J_Y + k] = (d_phi[(j - 1) * J_Y + k] - d_phi[(j + 1) * J_Y + k]) / (2. * hx);
         d_E_Y[j * J_Y + k] = (d_phi[j * J_Y + ((J_Y + k - 1) % J_Y)] - d_phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
         d_E_X[k] = 0.0; //Cero en las fronteras X
@@ -407,6 +410,7 @@ namespace pic_cuda {
     void D_electric_field_border (double *d_phi, double *d_E_X, double *d_E_Y, double hx) {
       int k = (blockIdx.x * blockDim.x + threadIdx.x);
       if(k < J_Y) {
+        //To MPI
         d_E_X[k] = 0.0; //Cero en las fronteras X
         d_E_Y[k] = 0.0;
         d_E_X[(J_X - 1) * J_Y + k] = 0.0;
@@ -454,6 +458,7 @@ namespace pic_cuda {
         j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
         temp_y  =  jr_y-double(j_y);
 
+        //To MPI
         Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
@@ -553,6 +558,7 @@ namespace pic_cuda {
       }
 
       if (h_pos_x[i] >= 0 && h_pos_x[i] <= L_MAX_X) {
+        //To MPI
         h_pos_x[k] = h_pos_x[i];
         h_pos_y[k] = h_pos_y[i];
         h_vel_x[k] = h_vel_x[i];
