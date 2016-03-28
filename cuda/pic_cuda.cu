@@ -180,12 +180,17 @@ namespace pic_cuda {
     for (int i = 0; i < NSP;i++) {
 
       //To MPI
-      jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
-      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      temp_x  =  jr_x - j_x;
-      jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-      j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      temp_y  =  jr_y - j_y;
+      if (rank == 0) {
+        jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+        j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        temp_x  =  jr_x - j_x;
+      }
+      else if (rank == 1) {
+        jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        temp_y  =  jr_y - j_y;
+        rank = 0;
+      }
 
       n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
       n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
@@ -206,13 +211,19 @@ namespace pic_cuda {
       if(i < NSP) {
 
         //To MPI
-        hhx = hx * hx * hx;
-        jr_x = d_pos_x[i] / hx; // indice (real) de la posición de la superpartícula
-        j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-        temp_x  =  jr_x - j_x;
-        jr_y = d_pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-        temp_y  =  jr_y - j_y;
+        if (rank = 0){
+          hhx = hx * hx * hx;
+          jr_x = d_pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+          j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+          temp_x  =  jr_x - j_x;
+        }
+        else if (rank == 1) {
+          jr_y = d_pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+          j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+          temp_y  =  jr_y - j_y;
+          rank == 0;
+        }
+
         //__threadfence();
         tmp = (1. - temp_x) * (1 - temp_y) / (hhx);
          __syncthreads();
@@ -570,6 +581,7 @@ namespace pic_cuda {
       fact = FACT_I;
 
     for (int i = 0; i < NSP; i++) {
+      //To MPI
       jr_x = pos_x[i] / hx;     // Índice (real) de la posición de la superpartícula (X)
       j_x  = int(jr_x);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (X)
       temp_x = jr_x - double(j_x);
@@ -577,6 +589,7 @@ namespace pic_cuda {
       j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
       temp_y  =  jr_y-double(j_y);
 
+      //To MPI
       Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
         temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
         (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
@@ -587,6 +600,7 @@ namespace pic_cuda {
         (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
         temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
 
+      //To MPI
       vel_x[i] = vel_x[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_X * DT;
       vel_y[i] = vel_y[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_Y * DT;
 
@@ -618,6 +632,7 @@ namespace pic_cuda {
         pos_y[i] += L_MAX_Y;
 
       if(pos_x[i] >= 0 && pos_x[i] <= L_MAX_X) {
+        //To MPI
         pos_x[kk1] = pos_x[i];
         pos_y[kk1] = pos_y[i];
         vel_x[kk1] = vel_x[i];
