@@ -120,8 +120,6 @@ int main(int argc, char* argv[]) {
     rank = 0;
   }
 
-  cout << rank << endl;
-
   double tacum = 0;
   for(int kk  =  0, kt  =  0; kt <= K_total; kt++) {
     rank = 0;

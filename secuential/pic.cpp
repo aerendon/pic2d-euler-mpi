@@ -14,8 +14,8 @@ using namespace std;
 namespace pic {
   const int MAX_SPE     = 10000;           // Limite (computacional) de Superpartículas electrónicas
   const int MAX_SPI     = 10000;           // Limite (computacional) de Superpartículas iónicas
-  const int J_X         = 513;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
-  const int J_Y         = 256;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
+  const int J_X         = 2049;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
+  const int J_Y         = 1024;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
   const int ELECTRONS   = 0;
   const int IONS        = 1;
   const int X           = 0;
