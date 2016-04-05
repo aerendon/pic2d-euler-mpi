@@ -124,10 +124,16 @@ namespace pic {
   void initialize_Particles (double *pos_x, double *pos_y, double *vel_x, double *vel_y,
       int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
     for (int i = 0; i < MAX_SPE; i++) {
-      pos_x[i + NSP] = 0;
-      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
-      pos_y[i + NSP] = L_MAX_Y / 2.0;
-      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+      if (rank == 0) {
+        pos_x[i + NSP] = 0;
+        MPI_Send(&pos_x[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD);
+        vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
+      }
+      else if (rank == 1) {
+        pos_y[i + NSP] = L_MAX_Y / 2.0;
+        vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+        rank = 0;
+      }
     }
   }
 

@@ -114,9 +114,11 @@ int main(int argc, char* argv[]) {
 
   if (rank == 0) {
     initialize_Particles (pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, FE_MAXWELL_X, FE_MAXWELL_Y, VPHI_E_X, VPHI_E_Y);//Velocidades y posiciones iniciales de las partículas>
+    cout << hostname << endl;
   }
   else if (rank == 1) {
     initialize_Particles (pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, FI_MAXWELL_X, FI_MAXWELL_Y, VPHI_I_X, VPHI_I_Y);//Velocidades y posiciones iniciales de las partículas>
+    cout << hostname << endl;
     rank = 0;
   }
 
@@ -138,9 +140,11 @@ int main(int argc, char* argv[]) {
     // To MPI
     if (rank == 0){
       Concentration (pos_e_x, pos_e_y, ne, le, hx);// Calcular concentración de superpartículas electrónicas
-    }
+      //cout << hostname << "lo hizo" << endl;
+    } 
     else if (rank == 1) {
       Concentration (pos_i_x, pos_i_y, ni, li, hx);// Calcular concentración de superpartículas Iónicas
+      //cout << hostname << "lo hizo" << endl;
       rank = 0;
     }
 
@@ -183,9 +187,9 @@ int main(int argc, char* argv[]) {
     clock_t tiempo1  =  clock();
     
       if(kt % 5000 == 0) {
-        if (hostname[0] == 'h') cout << " CPU time " << kt / 5000 << " from " << hostname << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
-        else cout << hostname << endl;
-        // cout << " CPU time " << kt / 5000 <<  "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        if (hostname[0] == 'h') cout << " CPU time " << kt / 5000 << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        //else cout << hostname << endl;
+         //cout << " CPU time " << kt / 5000 << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
         tiempo0  =  clock();
       }
   } //Cierre del ciclo principal
