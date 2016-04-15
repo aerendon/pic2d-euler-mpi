@@ -1,4 +1,3 @@
-#include <mpi.h>
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -8,7 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <fftw3.h>
-
+#include "mpi.h"
 
 using namespace std;
 namespace pic {
@@ -59,7 +58,6 @@ namespace pic {
   const double DELTA_X = (LAMBDA_D);   //Paso espacial
   const double L_MAX_X = (((J_X-1) * DELTA_X) / X0);                      // Longitud región de simulación
   const double L_MAX_Y = (((J_Y-1) * DELTA_X) / X0);                      // Longitud región de simulación
-
   const double cte_rho = pow(E_CHARGE * T0, 2) / (M_I * EPSILON_0 * pow(X0, 3)); //Normalización de EPSILON_0
   const int    NTe = 1e5;
   const int    NTI = 1e5;                                  //Número de partículas "reales"
@@ -68,6 +66,11 @@ namespace pic {
   void prueba(int d){
     cout<<"LINE: "<< d <<endl;
   }
+  
+  //MPI
+ //int rank, size_mpi;
+  //MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  //MPI_Comm_size(MPI_COMM_WORLD, &size_mpi);
 
   //*********************
   //Velocidades Iniciales
@@ -122,19 +125,30 @@ namespace pic {
   }
 
   void initialize_Particles (double *pos_x, double *pos_y, double *vel_x, double *vel_y,
-      int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
+    //int initialized, finalized;
+    //MPI_Init(NULL, NULL);
+    //MPI_Inicialized(&initialized);
+    //if (!initialized) MPI_Init(NULL, NULL);
+
+    int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
     for (int i = 0; i < MAX_SPE; i++) {
       if (rank == 0) {
         pos_x[i + NSP] = 0;
         MPI_Send(&pos_x[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD);
         vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
+        MPI_Send(&vec_x[i + NSP], 1, MPI_INT, 1, 2, MPI_COMM_WORLD);
       }
       else if (rank == 1) {
         pos_y[i + NSP] = L_MAX_Y / 2.0;
+        MPI_Recv(&pos_x[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+        MPI_Recv(&vel_y[i + NPS], 1, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_ IGNORE);
         rank = 0;
       }
     }
+    //MPI_Finalize();
+    //MPI_Finalized(&finalized);
+    //if (!finalized) MPI_Finalize();
   }
 
   //**************************************************************************************
@@ -149,12 +163,24 @@ namespace pic {
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-      jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
-      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      temp_x  =  jr_x - j_x;
-      jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-      j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      temp_y  =  jr_y - j_y;
+      //To MPI
+      if (rank == 0) {
+        jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+        MPI_Send(&jr_x, 1, MPI_INT, 1, 3, MPI_COMM_WORLD);
+        j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        MPI_Send(&j_x, 1, MPI_INT, 1, 4, MPI_COMM_WORLD);
+        temp_x  =  jr_x - j_x;
+        MPI_Send(&temp_x, 1, MPI_INT, 1, 5, MPI_COMM_WORLD);
+      }
+      else {
+        jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+        
+        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        
+        temp_y  =  jr_y - j_y;
+        
+        rank = 0;
+      }
 
       n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
       n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
