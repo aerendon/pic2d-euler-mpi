@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id 
 	MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes 
 	gethostname(hostname,255);
-	printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
+	//printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
 
   //************************
   // Parámetros del sistema
