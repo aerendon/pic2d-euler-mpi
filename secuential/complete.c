@@ -198,6 +198,13 @@ using namespace std;
     fftw_plan p, p_y, p_i, p_yi;
     f = (double*) fftw_malloc(sizeof(double)* M);
     f2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    
+    //MPI
+    int rank, size_mpi;
+    char hostname[256];
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+    gethostname(hostname,255);
 
     p = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
     p_y = fftw_plan_dft_1d(N, f2, f2, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -271,20 +278,27 @@ using namespace std;
 
   //*********************************************************
   void electric_field(double *phi, double *E_X, double *E_Y, double hx) {
+    //MPI
+    int rank, size_mpi;
+    char hostname[256];
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+    gethostname(hostname,255);
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
-        
+        if (rank == 0) {
         	E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
-         
+       	  E_X[k] = 0.0;  //Cero en las fronteras X
+          E_X[(J_X - 1) * J_Y + k] = 0.0;
+        }
+        else if (rank == 1) {
         	E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
             - phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
-
-       	E_X[k] = 0.0;  //Cero en las fronteras X
-        E_Y[k] = 0.0;
-        E_X[(J_X - 1) * J_Y + k] = 0.0;
-        E_Y[(J_X - 1) * J_Y + k] = 0.0;
+          E_Y[k] = 0.0;
+          E_Y[(J_X - 1) * J_Y + k] = 0.0;
+        }
       }
     }
 
@@ -319,20 +333,20 @@ using namespace std;
       j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
       temp_y  =  jr_y-double(j_y);
 
-      //if (rank == 0) {
+      if (rank == 0) {
         Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_X[(j_x + 1) * J_Y + (j_y + 1)];
-          //MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      //}
-      //else if (rank == 1) {
+          MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      }
+      else if (rank == 1) {
         Ep_Y = (1 - temp_x) * (1 - temp_y) * E_Y[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_Y[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
-          //MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
-      //}
+          MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
+      }
 
       vel_x[i] = vel_x[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_X * DT;
       vel_y[i] = vel_y[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_Y * DT;
@@ -434,14 +448,7 @@ int main(int argc, char* argv[]) {
 
   //MPI
   MPI_Init (&argc, &argv);
-
-  /*int rank, size_mpi;
-  char hostname[256];
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
-  MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
-  gethostname(hostname,255);
-*/  //printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
-
+  
   //************************
   // Parámetros del sistema
   //************************
