@@ -1,5 +1,5 @@
 #include "pic.cpp"
-#include <mpi.h>
+#include "mpi.h"
 #include <unistd.h> //Hostname
 
 using namespace std;
@@ -17,8 +17,13 @@ int main(int argc, char* argv[]) {
 	MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id 
 	MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes 
 	gethostname(hostname,255);
+<<<<<<< HEAD
+	printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
+  
+=======
 	//printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
 
+>>>>>>> d6103922e691194b006a1eed3d31bdc4d2d10e0a
   //************************
   // Parámetros del sistema
   //************************
@@ -112,13 +117,15 @@ int main(int argc, char* argv[]) {
   K_total = Ntv * k_MAX_inj;
 
 
-  if (rank == 0) {
+  //if (rank == 0) {
     initialize_Particles (pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, FE_MAXWELL_X, FE_MAXWELL_Y, VPHI_E_X, VPHI_E_Y);//Velocidades y posiciones iniciales de las partículas>
-  }
-  else if (rank == 1) {
+    //cout << hostname << endl;
+  //}
+  //else if (rank == 1) {
     initialize_Particles (pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, FI_MAXWELL_X, FI_MAXWELL_Y, VPHI_I_X, VPHI_I_Y);//Velocidades y posiciones iniciales de las partículas>
-    rank = 0;
-  }
+    //cout << hostname << endl;
+    //rank = 0;
+  //}
 
   double tacum = 0;
   for(int kk  =  0, kt  =  0; kt <= K_total; kt++) {
@@ -136,13 +143,15 @@ int main(int argc, char* argv[]) {
     // Calculo de "densidad de carga 2D del plasma"
 
     // To MPI
-    if (rank == 0){
+    //if (rank == 0){
       Concentration (pos_e_x, pos_e_y, ne, le, hx);// Calcular concentración de superpartículas electrónicas
-    }
-    else if (rank == 1) {
+      //cout << hostname << "lo hizo" << endl;
+    //} 
+    //else if (rank == 1) {
       Concentration (pos_i_x, pos_i_y, ni, li, hx);// Calcular concentración de superpartículas Iónicas
-      rank = 0;
-    }
+      //cout << hostname << "lo hizo" << endl;
+      //rank = 0;
+    //}
 
     for (int j  =  0; j < J_X; j++)
       for (int k  =  0; k < J_Y; k++)
@@ -172,20 +181,20 @@ int main(int argc, char* argv[]) {
     // Avanzar posiciones de superpartículas electrónicas e Iónicas
 
     // To MPI
-    if (rank == 0) {
+    //if (rank == 0) {
       Motion(pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, ELECTRONS, E_X, E_Y, hx, total_e_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
-    }
-    else if (rank == 1) {
+    //}
+    //else if (rank == 1) {
       Motion(pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, IONS, E_X, E_Y, hx, total_i_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
-      rank = 0;
-    }
+      //rank = 0;
+    //}
 
     clock_t tiempo1  =  clock();
     
       if(kt % 5000 == 0) {
-        if (hostname[0] == 'h') cout << " CPU time " << kt / 5000 << " from " << hostname << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
-        else cout << hostname << endl;
-        // cout << " CPU time " << kt / 5000 <<  "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        if (hostname[0] == 'h') cout << " CPU time " << kt / 5000 << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        //else cout << hostname << endl;
+         //cout << " CPU time " << kt / 5000 << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
         tiempo0  =  clock();
       }
   } //Cierre del ciclo principal

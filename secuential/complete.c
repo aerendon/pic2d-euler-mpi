@@ -1,3 +1,5 @@
+#include <mpi.h>
+#include <unistd.h>
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
@@ -7,14 +9,14 @@
 #include <cstring>
 #include <fstream>
 #include <fftw3.h>
-#include "mpi.h"
+
 
 using namespace std;
-namespace pic {
+
   const int MAX_SPE     = 10000;           // Limite (computacional) de Superpartículas electrónicas
   const int MAX_SPI     = 10000;           // Limite (computacional) de Superpartículas iónicas
-  const int J_X         = 513;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
-  const int J_Y         = 256;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
+  const int J_X         = 129;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
+  const int J_Y         = 64;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
   const int ELECTRONS   = 0;
   const int IONS        = 1;
   const int X           = 0;
@@ -58,6 +60,7 @@ namespace pic {
   const double DELTA_X = (LAMBDA_D);   //Paso espacial
   const double L_MAX_X = (((J_X-1) * DELTA_X) / X0);                      // Longitud región de simulación
   const double L_MAX_Y = (((J_Y-1) * DELTA_X) / X0);                      // Longitud región de simulación
+
   const double cte_rho = pow(E_CHARGE * T0, 2) / (M_I * EPSILON_0 * pow(X0, 3)); //Normalización de EPSILON_0
   const int    NTe = 1e5;
   const int    NTI = 1e5;                                  //Número de partículas "reales"
@@ -66,11 +69,7 @@ namespace pic {
   void prueba(int d){
     cout<<"LINE: "<< d <<endl;
   }
-  
-  //MPI
- //int rank, size_mpi;
-  //MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  //MPI_Comm_size(MPI_COMM_WORLD, &size_mpi);
+
 
   //*********************
   //Velocidades Iniciales
@@ -125,30 +124,29 @@ namespace pic {
   }
 
   void initialize_Particles (double *pos_x, double *pos_y, double *vel_x, double *vel_y,
-    //int initialized, finalized;
-    //MPI_Init(NULL, NULL);
-    //MPI_Inicialized(&initialized);
-    //if (!initialized) MPI_Init(NULL, NULL);
+      int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
 
-    int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
+		//MPI
+	  int rank, size_mpi;
+		char hostname[256];
+		MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+		MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+		gethostname(hostname,255);
+
     for (int i = 0; i < MAX_SPE; i++) {
-      if (rank == 0) {
-        pos_x[i + NSP] = 0;
-        MPI_Send(&pos_x[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD);
-        vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
-        MPI_Send(&vec_x[i + NSP], 1, MPI_INT, 1, 2, MPI_COMM_WORLD);
-      }
-      else if (rank == 1) {
-        pos_y[i + NSP] = L_MAX_Y / 2.0;
-        MPI_Recv(&pos_x[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
-        MPI_Recv(&vel_y[i + NPS], 1, MPI_INT, 0, 2, MPI_COMM_WORLD, MPI_STATUS_ IGNORE);
-        rank = 0;
-      }
+    	if (rank == 0) {
+ 	      pos_x[i + NSP] = 0;
+	      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
+	      MPI_Recv(&pos_y[i + NSP], 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	      MPI_Recv(&vel_y[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	    }
+	    else if (rank == 1) {
+	      pos_y[i + NSP] = L_MAX_Y / 2.0;
+	      MPI_Send(&pos_y[i + NSP], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+	      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
+	      MPI_Send(&vel_y[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    	}
     }
-    //MPI_Finalize();
-    //MPI_Finalized(&finalized);
-    //if (!finalized) MPI_Finalize();
   }
 
   //**************************************************************************************
@@ -158,34 +156,30 @@ namespace pic {
     int j_x,j_y;
     double temp_x,temp_y;
     double jr_x,jr_y;
+
+    int rank, size_mpi;
+		char hostname[256];
+		MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+		MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+		gethostname(hostname,255);
+
     for(int i = 0; i < J_X * J_Y; i++) {
       n[i] = 0.;
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-      //To MPI
-      if (rank == 0) {
-        jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
-        MPI_Send(&jr_x, 1, MPI_INT, 1, 3, MPI_COMM_WORLD);
-        j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-        MPI_Send(&j_x, 1, MPI_INT, 1, 4, MPI_COMM_WORLD);
-        temp_x  =  jr_x - j_x;
-        MPI_Send(&temp_x, 1, MPI_INT, 1, 5, MPI_COMM_WORLD);
-      }
-      else {
-        jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-        
-        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-        
-        temp_y  =  jr_y - j_y;
-        
-        rank = 0;
-      }
+	      jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+	      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+	      temp_x  =  jr_x - j_x;
+      	jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+      	j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+      	temp_y  =  jr_y - j_y;
 
-      n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
-      n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
-      n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
-      n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
+	    	n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
+      	n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
+     	 	n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
+      	n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
+
     }
   }
 
@@ -204,6 +198,13 @@ namespace pic {
     fftw_plan p, p_y, p_i, p_yi;
     f = (double*) fftw_malloc(sizeof(double)* M);
     f2 = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * N);
+    
+    //MPI
+    int rank, size_mpi;
+    char hostname[256];
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+    gethostname(hostname,255);
 
     p = fftw_plan_r2r_1d(M, f, f, FFTW_RODFT00, FFTW_ESTIMATE);
     p_y = fftw_plan_dft_1d(N, f2, f2, FFTW_FORWARD, FFTW_ESTIMATE);
@@ -277,20 +278,28 @@ namespace pic {
 
   //*********************************************************
   void electric_field(double *phi, double *E_X, double *E_Y, double hx) {
+    //MPI
+    int rank, size_mpi;
+    char hostname[256];
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+    gethostname(hostname,255);
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
-        E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
+        if (rank == 0) {
+        	E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
-        E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
+       	  E_X[k] = 0.0;  //Cero en las fronteras X
+          E_X[(J_X - 1) * J_Y + k] = 0.0;
+        }
+        else if (rank == 1) {
+        	E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
             - phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
-
-        E_X[k] = 0.0;  //Cero en las fronteras X
-        E_Y[k] = 0.0;
-        E_X[(J_X - 1) * J_Y + k] = 0.0;
-        E_Y[(J_X - 1) * J_Y + k] = 0.0;
+          E_Y[k] = 0.0;
+          E_Y[(J_X - 1) * J_Y + k] = 0.0;
+        }
       }
-
     }
 
   }
@@ -305,6 +314,12 @@ namespace pic {
     int kk1 = 0;
     int conteo_perdidas = 0;
 
+    int rank, size_mpi;
+    char hostname[256];
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
+    gethostname(hostname,255);
+
     if(especie ==  ELECTRONS)
       fact = FACT_EL;
     else
@@ -318,15 +333,20 @@ namespace pic {
       j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
       temp_y  =  jr_y-double(j_y);
 
-      Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
-        temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
-        (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
-        temp_x * temp_y * E_X[(j_x + 1) * J_Y + (j_y + 1)];
-
-      Ep_Y = (1 - temp_x) * (1 - temp_y) * E_Y[j_x * J_Y + j_y] +
-        temp_x * (1 - temp_y) * E_Y[(j_x + 1) * J_Y + j_y] +
-        (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
-        temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
+      if (rank == 0) {
+        Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
+          temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
+          (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
+          temp_x * temp_y * E_X[(j_x + 1) * J_Y + (j_y + 1)];
+          MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      }
+      else if (rank == 1) {
+        Ep_Y = (1 - temp_x) * (1 - temp_y) * E_Y[j_x * J_Y + j_y] +
+          temp_x * (1 - temp_y) * E_Y[(j_x + 1) * J_Y + j_y] +
+          (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
+          temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
+          MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
+      }
 
       vel_x[i] = vel_x[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_X * DT;
       vel_y[i] = vel_y[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_Y * DT;
@@ -411,4 +431,212 @@ namespace pic {
   }
 
 
-}
+
+
+
+
+
+
+
+
+
+
+
+//********
+
+int main(int argc, char* argv[]) {
+
+  //MPI
+  MPI_Init (&argc, &argv);
+  
+  //************************
+  // Parámetros del sistema
+  //************************
+  clock_t tiempo0  =  clock();
+
+  int le = 0, li = 0;
+  double  t_0, x_0;
+  int  total_e_perdidos = 0;
+  int  total_i_perdidos = 0;
+  double  mv2perdidas = 0;
+
+  double  ND = NE03D * pow(LAMBDA_D,3);                          //Parámetro del plasma
+  int     k_MAX_inj;   //Tiempo máximo de inyección
+  int     K_total;     //Tiempo total
+  int     Ntv = 8;
+  int     NTSPe, NTSPI, MAX_SPE_dt, MAX_SPI_dt;
+  double  phi0 = 2. * K_BOLTZMANN * Te / (M_PI * E_CHARGE ), E0 = phi0 / X0;
+ // FILE    *outEnergia;
+
+
+  //***************************
+  //Constantes de normalización
+  //***************************
+
+  //double  X0 = LAMBDA_D;                //Escala de longitud: Longitud de Debye
+  double  n0  =  double(NTe) / (X0 * X0 * X0);
+  double  ni0_3D  =  NI03D * pow(X0, 3);
+  double  ne0_3D  =  NE03D * pow(X0, 3);
+  double  om_p  =  VFLUX_E_X / LAMBDA_D;                    //Frecuencia del plasma
+  double hx;
+  //int seed  =  time (NULL);
+  //srand (seed);  // Semilla para generar números aleatorios dependiendo del reloj interno.
+  //******************
+  //ARCHIVOS DE SALIDA
+  //******************
+  //outEnergia = fopen("Energia","w");
+  char buffer[40];
+
+  //****************************************
+  // Inicialización de variables del sistema
+  //****************************************
+  int size = MAX_SPE * sizeof(double);
+  int size1 = J_X * J_Y * sizeof(double);
+  int size2 = J_X * J_Y * sizeof(complex<double>);
+
+  double *pos_e_x, *pos_e_y, *pos_i_x, *pos_i_y, *vel_e_x, *vel_e_y, *vel_i_x, *vel_i_y, *ne, *ni;
+  double *phi, *E_X, *E_Y;
+  complex<double> *rho;
+  //double  E_i,E_e,E_field,E_total,E_perdida;
+
+  pos_e_x = (double *) malloc(size);
+  pos_e_y = (double *) malloc(size);
+  pos_i_x = (double *) malloc(size);
+  pos_i_y = (double *) malloc(size);
+
+  vel_e_x = (double *) malloc(size);
+  vel_e_y = (double *) malloc(size);
+  vel_i_x = (double *) malloc(size);
+  vel_i_y = (double *) malloc(size);
+  ne    = (double *) malloc(size1);
+  ni    = (double *) malloc(size1);
+  E_X   = (double *) malloc(size1);
+  E_Y   = (double *) malloc(size1);
+  phi   = (double *) malloc(size1);
+  rho   = (complex<double> *) malloc(size2);
+
+  //***************************
+  // Normalización de variables
+  //***************************
+
+  t_0 = 1;
+  x_0 = 1;
+  hx = DELTA_X / X0;                            // Paso espacial
+  NTSPe = NTe / FACTOR_CARGA_E;
+  NTSPI = NTI / FACTOR_CARGA_I; // Número total de superpartículas
+  // Inyectadas en un tiempo T0.
+  // ( =  número de superpartículas
+  // Inyectadas por unidad de tiempo,
+  // puesto que T0*(normalizado) = 1.
+
+  int Kemision = 20;  //Pasos para liberar partículas
+  double dt_emision = Kemision * DT; //Tiempo para liberar partículas
+
+  MAX_SPE_dt = NTSPe * dt_emision;   //Número de Superpartículas el. liberadas cada vez.
+  MAX_SPI_dt = MAX_SPE_dt;
+
+
+  // Ciclo de tiempo
+
+  k_MAX_inj = t_0 / DT;
+  K_total = Ntv * k_MAX_inj;
+
+
+  //if (rank == 0) {
+    initialize_Particles (pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, FE_MAXWELL_X, FE_MAXWELL_Y, VPHI_E_X, VPHI_E_Y);//Velocidades y posiciones iniciales de las partículas>
+  //}
+  //else if (rank == 1) {
+    initialize_Particles (pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, FI_MAXWELL_X, FI_MAXWELL_Y, VPHI_I_X, VPHI_I_Y);//Velocidades y posiciones iniciales de las partículas>
+    //rank = 0;
+  //}
+
+  //cout << rank << endl;
+
+  double tacum = 0;
+  for(int kk  =  0, kt  =  0; kt <= K_total; kt++) {
+    //rank = 0;
+    /*if(kt % 50000 == 0) {
+      printf("kt = %d\n", kt);
+      printf("le = %d   li = %d \n",le, li );
+    }*/
+    if(kt <= k_MAX_inj && kt == kk) {// Inyectar superpartículas (i-e)
+      le+= MAX_SPE_dt;
+      li+= MAX_SPI_dt;
+      kk = kk + Kemision;
+    }
+    //-----------------------------------------------
+    // Calculo de "densidad de carga 2D del plasma"
+
+    // To MPI
+    //if (rank == 0){
+      Concentration (pos_e_x, pos_e_y, ne, le, hx);// Calcular concentración de superpartículas electrónicas
+    //}
+    //else if (rank == 1) {
+      Concentration (pos_i_x, pos_i_y, ni, li, hx);// Calcular concentración de superpartículas Iónicas
+      //rank = 0;
+    //}
+
+    for (int j  =  0; j < J_X; j++)
+      for (int k  =  0; k < J_Y; k++)
+        rho[j * J_Y + k] = cte_rho * FACTOR_CARGA_E * (ni[j * J_Y + k] - ne[j * J_Y + k]) / n_0;
+
+    // Calcular potencial eléctrico en puntos de malla
+    poisson2D_dirichletX_periodicY(phi, rho, hx);
+    // Calcular campo eléctrico en puntos de malla
+
+    electric_field(phi, E_X, E_Y, hx);
+
+    // imprimir el potencial electroestatico.
+    if(kt % 10000  ==  0) {
+      sprintf(buffer,"Poisson%d.data", kt);
+      ofstream dataFile(buffer);
+      for (int j  =  0; j < J_X; j++) {
+        double thisx  =  j * hx;
+        for (int k  =  0; k < J_Y; k++) {
+          double thisy  =  k * hx;
+          dataFile << thisx << '\t' << thisy << '\t' << phi[(j * J_Y) + k] << '\n';
+        }
+        dataFile << '\n';
+      }
+      dataFile.close();
+    }
+
+    // Avanzar posiciones de superpartículas electrónicas e Iónicas
+
+    // To MPI
+    //if (rank == 0) {
+      Motion(pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, ELECTRONS, E_X, E_Y, hx, total_e_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
+    //}
+    //else if (rank == 1) {
+      Motion(pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, IONS, E_X, E_Y, hx, total_i_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
+      //rank = 0;
+    //}
+
+    clock_t tiempo1  =  clock();
+
+      if(kt % 5000 == 0) {
+        //if (hostname[0] == 'h') cout << " CPU time " << kt / 5000 << " from " << hostname << "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        //else cout << hostname << endl;
+         cout << " CPU time " << kt / 5000 <<  "  =  " << double(tiempo1 - tiempo0) / CLOCKS_PER_SEC << " sec" << endl;
+        tiempo0  =  clock();
+      }
+  } //Cierre del ciclo principal
+
+  free(pos_e_x);
+  free(pos_e_y);
+  free(pos_i_x);
+  free(pos_i_y);
+  free(vel_e_x);
+  free(vel_e_y);
+  free(vel_i_x);
+  free(vel_i_y);
+  free(ne);
+  free(ni);
+  free(phi);
+  free(E_X);
+  free(E_Y);
+  free(rho);
+
+  MPI_Finalize();  /*Clone MPI*/
+  return (0);
+}// FINAL MAIN
