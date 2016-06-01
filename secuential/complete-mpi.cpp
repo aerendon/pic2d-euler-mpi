@@ -169,17 +169,21 @@ using namespace std;
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-	      jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+	    if (rank == 0) {
+        jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
 	      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
 	      temp_x  =  jr_x - j_x;
-      	jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-      	j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      	temp_y  =  jr_y - j_y;
-
-	    	n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
-      	n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
-     	 	n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
-      	n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
+      }
+      else if (rank == 1) {
+        jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        temp_y  =  jr_y - j_y;
+      }
+      
+	    n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
+      n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
+     	n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
+      n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
 
     }
   }
