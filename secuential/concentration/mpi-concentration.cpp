@@ -134,7 +134,7 @@ using namespace std;
 	      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
 	      pos_y[i + NSP] = L_MAX_Y / 2.0;
 	      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
-    	}
+    	
     }
   }
 
@@ -157,16 +157,22 @@ using namespace std;
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-	    //if (rank == 0) {
+	    if (rank == 0) {
         jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
 	      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
 	      temp_x  =  jr_x - j_x;
-      //}
-      //else if (rank == 1) {
+        MPI_Recv(&jr_y, 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&j_y, 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&temp_y, 1, MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      }
+      else if (rank == 1) {
         jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+        MPI_Send(&jr_y, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
         j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        MPI_Send(&j_y, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
         temp_y  =  jr_y - j_y;
-      //}
+        MPI_Send(&temp_y, 1, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+      }
       
 	    n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
       n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
