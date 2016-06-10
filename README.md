@@ -1,4 +1,4 @@
-# pic2d-euler
+# pic2d-euler - MPI
 PIC 2D before Leap-Frog. MPI/CUDA implementation
 
 ## COMPILATION REQUIREMENTS
@@ -14,7 +14,7 @@ nvcc
 opencl-header, libclc and the OpenCL implementation of the fabricant of the device
 
 ### MPI
-nvcc
+mpicc
 
 #### Compile with:
 make
