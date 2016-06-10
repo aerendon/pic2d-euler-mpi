@@ -169,16 +169,16 @@ using namespace std;
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-	    if (rank == 0) {
+	    //if (rank == 0) {
         jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
 	      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
 	      temp_x  =  jr_x - j_x;
-      }
-      else if (rank == 1) {
+      //}
+      //else if (rank == 1) {
         jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
         j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
         temp_y  =  jr_y - j_y;
-      }
+      //}
       
 	    n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
       n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
@@ -286,16 +286,16 @@ using namespace std;
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
-        if (rank == 0) {
+        //if (rank == 0) {
         	E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
-          MPI_Recv(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-        else if (rank == 1) {
+        //  MPI_Recv(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //}
+        //else if (rank == 1) {
         	E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
             - phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
-          MPI_Send(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD);
-        }
+        //  MPI_Send(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD);
+        //}
 
        	E_X[k] = 0.0;  //Cero en las fronteras X
         E_Y[k] = 0.0;
@@ -336,20 +336,20 @@ using namespace std;
       j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
       temp_y  =  jr_y-double(j_y);
 
-      if (rank == 0) {
+      //if (rank == 0) {
         Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_X[(j_x + 1) * J_Y + (j_y + 1)];
-          MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      }
-      else if (rank == 1) {
+          //MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      //}
+      //else if (rank == 1) {
         Ep_Y = (1 - temp_x) * (1 - temp_y) * E_Y[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_Y[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
-          MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
-      }
+          //MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
+      //}
 
       vel_x[i] = vel_x[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_X * DT;
       vel_y[i] = vel_y[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_Y * DT;

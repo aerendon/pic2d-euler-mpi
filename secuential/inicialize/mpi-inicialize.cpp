@@ -1,3 +1,5 @@
+//MPI - inicialize_Particles
+
 #include <mpi.h>
 #include <unistd.h>
 #include <iostream>
@@ -15,8 +17,8 @@ using namespace std;
 
   const int MAX_SPE     = 10000;           // Limite (computacional) de Superpartículas electrónicas
   const int MAX_SPI     = 10000;           // Limite (computacional) de Superpartículas iónicas
-  const int J_X         = 257;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
-  const int J_Y         = 128;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
+  const int J_X         = 129;           // Número de puntos de malla X. Recomendado: Del orden 2^n+1
+  const int J_Y         = 64;           // Número de puntos de malla Y. Recomendado: Del orden 2^n
   const int ELECTRONS   = 0;
   const int IONS        = 1;
   const int X           = 0;
@@ -87,6 +89,7 @@ using namespace std;
       int seed  =  time (NULL);
       srand (seed);
       flag  =  1;
+	//www.howtoinstall.co/en/ubuntu/trusty/libunwind-setjmp0-dev(CUDA) --compiler-bindir $(CPP) pic_leap.cpp -o pic_leap.mio $(C_FLAGS) $(CUDA_FLAGS)
     }
 
     v = vmin+(vmax-vmin)*double(rand())/double(RAND_MAX); // Calcular valor aleatorio de v uniformemente distribuido en el rango [vmin,vmax]
@@ -168,17 +171,17 @@ using namespace std;
     } // Inicializar densidad de carga
 
     for (int i = 0; i < NSP;i++) {
-	      jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
+        jr_x = pos_x[i] / hx; // indice (real) de la posición de la superpartícula
 	      j_x  = (int) jr_x;    // indice  inferior (entero) de la celda que contiene a la superpartícula
 	      temp_x  =  jr_x - j_x;
-      	jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
-      	j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
-      	temp_y  =  jr_y - j_y;
+        jr_y = pos_y[i] / hx; // indice (real) de la posición de la superpartícula
+        j_y  = (int) jr_y;    // indice  inferior (entero) de la celda que contiene a la superpartícula
+        temp_y  =  jr_y - j_y;
 
-	    	n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
-      	n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
-     	 	n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
-      	n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
+	    n[j_y + j_x * J_Y] += (1. - temp_x) * (1. - temp_y) / (hx * hx * hx);
+      n[j_y + (j_x + 1) * J_Y] += temp_x * (1. - temp_y) / (hx * hx * hx);
+     	n[(j_y + 1) + j_x * J_Y] += (1. - temp_x) * temp_y / (hx * hx * hx);
+      n[(j_y + 1) + (j_x + 1) * J_Y] += temp_x * temp_y / (hx * hx * hx);
 
     }
   }
@@ -281,16 +284,10 @@ using namespace std;
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
-        if (rank == 0) {
         	E_X[j * J_Y + k] = (phi[(j - 1) * J_Y + k]
             - phi[(j + 1) * J_Y + k]) / (2. * hx);
-          MPI_Recv(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 1, 5, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-        else if (rank == 1) {
         	E_Y[j * J_Y + k] = (phi[j * J_Y + ((J_Y + k - 1) % J_Y)]
             - phi[j * J_Y + ((k + 1) % J_Y)]) / (2. * hx);
-          MPI_Send(&E_Y[j * J_Y + k], 1, MPI_DOUBLE, 0, 5, MPI_COMM_WORLD);
-        }
 
        	E_X[k] = 0.0;  //Cero en las fronteras X
         E_Y[k] = 0.0;
@@ -331,20 +328,14 @@ using namespace std;
       j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
       temp_y  =  jr_y-double(j_y);
 
-      if (rank == 0) {
         Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_X[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_X[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_X[(j_x + 1) * J_Y + (j_y + 1)];
-          //MPI_Recv(&Ep_Y, 1, MPI_DOUBLE, 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      }
-      else if (rank == 1) {
         Ep_Y = (1 - temp_x) * (1 - temp_y) * E_Y[j_x * J_Y + j_y] +
           temp_x * (1 - temp_y) * E_Y[(j_x + 1) * J_Y + j_y] +
           (1 - temp_x) * temp_y * E_Y[j_x * J_Y + (j_y + 1)] +
           temp_x * temp_y * E_Y[(j_x + 1) * J_Y + (j_y + 1)];
-          MPI_Send(&Ep_Y, 1, MPI_DOUBLE, 0, 6, MPI_COMM_WORLD);
-      }
 
       vel_x[i] = vel_x[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_X * DT;
       vel_y[i] = vel_y[i] + CTE_E * FACTOR_CARGA_E * fact * Ep_Y * DT;
@@ -430,29 +421,12 @@ using namespace std;
 
 
 
-
-
-
-
-
-
-
-
-
-
 //********
 
 int main(int argc, char* argv[]) {
 
   //MPI
   MPI_Init (&argc, &argv);
-
-  /*int rank, size_mpi;
-  char hostname[256];
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
-  MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
-  gethostname(hostname,255);
-*/  //printf( "Hello world from %s  process %d of %d\n", hostname, rank, size_mpi);
 
   //************************
   // Parámetros del sistema
@@ -546,20 +520,11 @@ int main(int argc, char* argv[]) {
   k_MAX_inj = t_0 / DT;
   K_total = Ntv * k_MAX_inj;
 
-
-  //if (rank == 0) {
-    initialize_Particles (pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, FE_MAXWELL_X, FE_MAXWELL_Y, VPHI_E_X, VPHI_E_Y);//Velocidades y posiciones iniciales de las partículas>
-  //}
-  //else if (rank == 1) {
-    initialize_Particles (pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, FI_MAXWELL_X, FI_MAXWELL_Y, VPHI_I_X, VPHI_I_Y);//Velocidades y posiciones iniciales de las partículas>
-    //rank = 0;
-  //}
-
-  //cout << rank << endl;
+  initialize_Particles (pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, FE_MAXWELL_X, FE_MAXWELL_Y, VPHI_E_X, VPHI_E_Y);//Velocidades y posiciones iniciales de las partículas>
+  initialize_Particles (pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, FI_MAXWELL_X, FI_MAXWELL_Y, VPHI_I_X, VPHI_I_Y);//Velocidades y posiciones iniciales de las partículas>
 
   double tacum = 0;
   for(int kk  =  0, kt  =  0; kt <= K_total; kt++) {
-    //rank = 0;
     /*if(kt % 50000 == 0) {
       printf("kt = %d\n", kt);
       printf("le = %d   li = %d \n",le, li );
@@ -572,14 +537,8 @@ int main(int argc, char* argv[]) {
     //-----------------------------------------------
     // Calculo de "densidad de carga 2D del plasma"
 
-    // To MPI
-    //if (rank == 0){
-      Concentration (pos_e_x, pos_e_y, ne, le, hx);// Calcular concentración de superpartículas electrónicas
-    //}
-    //else if (rank == 1) {
-      Concentration (pos_i_x, pos_i_y, ni, li, hx);// Calcular concentración de superpartículas Iónicas
-      //rank = 0;
-    //}
+    Concentration (pos_e_x, pos_e_y, ne, le, hx);// Calcular concentración de superpartículas electrónicas
+    Concentration (pos_i_x, pos_i_y, ni, li, hx);// Calcular concentración de superpartículas Iónicas
 
     for (int j  =  0; j < J_X; j++)
       for (int k  =  0; k < J_Y; k++)
@@ -608,14 +567,8 @@ int main(int argc, char* argv[]) {
 
     // Avanzar posiciones de superpartículas electrónicas e Iónicas
 
-    // To MPI
-    //if (rank == 0) {
-      Motion(pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, ELECTRONS, E_X, E_Y, hx, total_e_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
-    //}
-    //else if (rank == 1) {
-      Motion(pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, IONS, E_X, E_Y, hx, total_i_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
-      //rank = 0;
-    //}
+    Motion(pos_e_x, pos_e_y, vel_e_x, vel_e_y, le, ELECTRONS, E_X, E_Y, hx, total_e_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
+    Motion(pos_i_x, pos_i_y, vel_i_x, vel_i_y, li, IONS, E_X, E_Y, hx, total_i_perdidos, mv2perdidas);//, total_elec_perdidos, total_ion_perdidos, mv2_perdidas);
 
     clock_t tiempo1  =  clock();
 
