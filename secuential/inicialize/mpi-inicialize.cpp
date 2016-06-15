@@ -137,18 +137,18 @@ using namespace std;
 		gethostname(hostname,255);
 
     for (int i = 0; i < MAX_SPE; i++) {
-    	//if (rank == 0) {
+    	if (rank == 0) {
  	      pos_x[i + NSP] = 0;
 	      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
-	      //MPI_Recv(&pos_y[i + NSP], 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	      //MPI_Recv(&vel_y[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	    //}
-	    //else if (rank == 1) {
+	      MPI_Recv(&pos_y[i + NSP], 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	      MPI_Recv(&vel_y[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	    }
+	    else if (rank == 1) {
 	      pos_y[i + NSP] = L_MAX_Y / 2.0;
-	      //MPI_Send(&pos_y[i + NSP], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+	      MPI_Send(&pos_y[i + NSP], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 	      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
-	      //MPI_Send(&vel_y[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
-    	//}
+	      MPI_Send(&vel_y[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    	}
     }
   }
 
