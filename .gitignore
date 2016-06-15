@@ -4,7 +4,6 @@
 *.mio
 *.in
 *.o
-*.data
 fase*
 potencial*
 Energia*
