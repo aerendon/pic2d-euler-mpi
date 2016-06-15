@@ -1,4 +1,4 @@
-#include <mpi.h>
+//#include <mpi.h>
 #include <unistd.h>
 #include <iostream>
 #include <cstdlib>
@@ -128,25 +128,25 @@ using namespace std;
       int NSP, int fmax_x, int fmax_y, int vphi_x, int vphi_y) {
 
 		//MPI
-	  int rank, size_mpi;
+	  /*int rank, size_mpi;
 		char hostname[256];
 		MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
 		MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
 		gethostname(hostname,255);
-
+*/
     for (int i = 0; i < MAX_SPE; i++) {
-    	if (rank == 0) {
+    	//if (rank == 0) {
  	      pos_x[i + NSP] = 0;
 	      vel_x[i + NSP] = create_Velocities_X (fmax_x, vphi_x);
-	      MPI_Recv(&pos_y[i + NSP], 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	      MPI_Recv(&vel_y[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-	    }
-	    else if (rank == 1) {
+	      //MPI_Recv(&pos_y[i + NSP], 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	      //MPI_Recv(&vel_y[i + NSP], 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	    //}
+	    //else if (rank == 1) {
 	      pos_y[i + NSP] = L_MAX_Y / 2.0;
-	      MPI_Send(&pos_y[i + NSP], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+	      //MPI_Send(&pos_y[i + NSP], 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 	      vel_y[i + NSP] = create_Velocities_Y(fmax_y, vphi_y);
-	      MPI_Send(&vel_y[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
-    	}
+	      //MPI_Send(&vel_y[i + NSP], 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+    	//}
     }
   }
 
@@ -157,13 +157,13 @@ using namespace std;
     int j_x,j_y;
     double temp_x,temp_y;
     double jr_x,jr_y;
-
+/*
     int rank, size_mpi;
 		char hostname[256];
 		MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
 		MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
 		gethostname(hostname,255);
-
+*/
     for(int i = 0; i < J_X * J_Y; i++) {
       n[i] = 0.;
     } // Inicializar densidad de carga
@@ -276,13 +276,13 @@ using namespace std;
 
   //*********************************************************
   void electric_field(double *phi, double *E_X, double *E_Y, double hx) {
-
+/*
   	int rank, size_mpi;
 		char hostname[256];
 		MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
 		MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
 		gethostname(hostname,255);
-
+*/
 
     for (int j = 1; j < J_X - 1; j++) {
       for (int k = 0; k < J_Y; k++) {
@@ -316,13 +316,13 @@ using namespace std;
     double jr_x,jr_y;
     int kk1 = 0;
     int conteo_perdidas = 0;
-
+/*
     int rank, size_mpi;
     char hostname[256];
     MPI_Comm_rank (MPI_COMM_WORLD, &rank);        //MPI: get current process id
     MPI_Comm_size (MPI_COMM_WORLD, &size_mpi);    //MPI: get number of processes
     gethostname(hostname,255);
-
+*/
     if(especie ==  ELECTRONS)
       fact = FACT_EL;
     else
@@ -440,7 +440,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
 
   //MPI
-  MPI_Init (&argc, &argv);
+  //MPI_Init (&argc, &argv);
 
   //************************
   // Parámetros del sistema
@@ -609,6 +609,6 @@ int main(int argc, char* argv[]) {
   free(E_Y);
   free(rho);
 
-  MPI_Finalize();  /*Clone MPI*/
+  //MPI_Finalize();  /*Clone MPI*/
   return (0);
 }// FINAL MAIN
