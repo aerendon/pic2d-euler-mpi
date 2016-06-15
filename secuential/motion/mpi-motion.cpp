@@ -292,12 +292,22 @@ using namespace std;
       fact = FACT_I;
 
     for (int i = 0; i < NSP; i++) {
-      jr_x = pos_x[i] / hx;     // Índice (real) de la posición de la superpartícula (X)
-      j_x  = int(jr_x);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (X)
-      temp_x = jr_x - double(j_x);
-      jr_y = pos_y[i] / hx;     // Índice (real) de la posición de la superpartícula (Y)
-      j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
-      temp_y  =  jr_y-double(j_y);
+      //if (rank == 0) {
+        jr_x = pos_x[i] / hx;     // Índice (real) de la posición de la superpartícula (X)
+        j_x  = int(jr_x);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (X)
+        temp_x = jr_x - double(j_x);
+        //MPI_Recv(&jr_y, 1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //MPI_Recv(&j_y, 1, MPI_INT, 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //MPI_Recv(&temp_y, 1, MPI_DOUBLE, 1, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      //}
+      //else if (rank == 1) {
+        jr_y = pos_y[i] / hx;     // Índice (real) de la posición de la superpartícula (Y)
+        //MPI_Send(&jr_y, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        j_y  = int(jr_y);        // Índice  inferior (entero) de la celda que contiene a la superpartícula (Y)
+        //MPI_Send(&j_y, 1, MPI_INT, 0, 1, MPI_COMM_WORLD);
+        temp_y  =  jr_y-double(j_y);
+        //MPI_Send(&temp_y, 1, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD);
+      //}
 
       //if (rank == 0) {
         Ep_X = (1 - temp_x) * (1 - temp_y) * E_X[j_x * J_Y + j_y] +
