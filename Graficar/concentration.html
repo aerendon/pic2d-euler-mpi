@@ -1,0 +1,122 @@
+<!DOCTYPE HTML>
+<html>
+<meta charset="UTF-8">
+<head>
+	<script type="text/javascript">
+	window.onload = function () {
+		var chart = new CanvasJS.Chart("chartContainer",
+		{
+
+			title:{
+				text: "Tiempo de Ejecución Malla 2048*1024 Concentration CPU vs GPU vs MPI", //titulo de la grafica
+				fontSize: 30
+			},
+                        animationEnabled: true,
+			axisX:{
+				title: "Cantidad de partículas", //titulo eje X
+				gridColor: "Silver",
+				tickColor: "silver",
+
+
+			},
+                        toolTip:{
+                          shared:true
+                        },
+			theme: "theme2",
+			axisY: {
+				title: "Tiempos", //titulo eje Y
+				gridColor: "Silver",
+				tickColor: "silver"
+			},
+			legend:{
+				verticalAlign: "center",
+				horizontalAlign: "right"
+			},
+
+
+			data: [
+			{
+
+				//ESTO DE ACA ABAJO SON CADA UNA DE LAS LINEAS, COMO LAS PARTICULAS SON LAS MISMAS LO UNICO QUE HAY QUE CAMBIAR ES EL NOMBRE
+		        //DE LA LINEA Y EL NUMERO EN Y
+				type: "line",
+				showInLegend: true,
+				lineThickness: 2, //GROSOR DE LA LINEA
+				name: "GPU", //NOMBRE DE LA LINEA
+				markerType: "square",
+				color: "#F08080", //COLOR DE LA LINEA EN HEXA
+				dataPoints: [
+				//SOLO CAMBIAR EL NUMERO DEL PARAMETRO "y", OJO, VA CON PUNTO, NO CON COMA COMO EN LA TABLA
+				{ x: 1, y: 0.010891,label:  "10.000" },
+				{ x: 2, y: 0.013365,label:  "100.000" },
+				{ x: 3, y: 0.029026,label:  "1.000.000" },
+				{ x: 4, y: 0.173518,label:  "10.000.000" },
+				{ x: 5, y: 1.634162 ,label:  "100.000.000"}
+				]
+			},
+
+			{
+				type: "line",
+				showInLegend: true,
+				name: "CPU", //NOMBRE DE LA OTRA LINEA
+				color: "#20B2AA", //COLOR DE LA OTRA LINEA
+				lineThickness: 2,
+				//SOLO CAMBIAR EL NUMERO DEL PARAMETRO "y", OJO, VA CON PUNTO, NO CON COMA COMO EN LA TABLA
+				dataPoints: [
+				{ x: 1, y: 0.009656,label:  "10.000"  },
+				{ x: 2, y: 0.021268,label:  "100.000"},
+				{ x: 3, y: 0.150057,label:  "1.000.000" },
+				{ x: 4, y: 1.351595,label:  "10.000.000" },
+				{ x: 5, y: 14.281871 ,label:  "100.000.000"}
+				]
+			}
+
+				//EN CASO DE NECESITAR UNA TERCERA LINEA, DESCOMENTAR LAS LINEAS QUE HAY AQUI ABAJO
+			,{
+				type: "line",
+				showInLegend: true,
+				name: "MPI", //NOMBRE DE LA OTRA LINEA
+				color: "orange", //COLOR DE LA OTRA LINEA
+				lineThickness: 2,
+				//SOLO CAMBIAR EL NUMERO DEL PARAMETRO "y", OJO, VA CON PUNTO, NO CON COMA COMO EN LA TABLA
+				dataPoints: [
+				{ x: 1, y: 0.007062,label:  "10.000"  },
+				{ x: 2, y: 0.508700,label:  "100.000"},
+				{ x: 3, y: 3.47760,label:  "1.000.000" },
+				{ x: 4, y: 14.489488,label:  "10.000.000" },
+				{ x: 5, y: 36.2770815,label:  "100.000.000"}
+				]
+			}
+
+
+			],
+
+          legend:{
+            cursor:"pointer",
+            itemclick:function(e){
+              if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+              	e.dataSeries.visible = false;
+              }
+              else{
+                e.dataSeries.visible = true;
+              }
+              chart.render();
+            }
+          }
+		});
+
+chart.render();
+}
+</script>
+
+
+
+
+
+<script type="text/javascript" src="canvasjs.min.js"></script>
+</head>
+<body>
+	<div id="chartContainer" style="height: 300px; width: 100%;">
+	</div>
+</body>
+</html>
